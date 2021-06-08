@@ -2,11 +2,53 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 
-import re
+import re, os
 import numpy as np
 from collections import Counter
-from kaldi_io import read_mat_scp
+from python_speech_features import delta
+from python_speech_features import mfcc
+import scipy.io.wavfile as wav
 
+def build_training_list(path, testing_list, validation_list):
+    """
+    Based on SpeechCommand_v0.02 directory structure.
+    """
+    result = []
+    walk_tuple = os.walk(path)
+    directory_list = [x[1] for x in walk_tuple][0]
+    directory_list = [x for x in directory_list if "_background_noise_" not in x]
+    for directory in directory_list:
+        file_list = os.listdir(path + directory)
+        for wav_file in file_list:
+            wav_small_path = directory + "/" + wav_file
+            if wav_small_path not in testing_list and wav_small_path not in validation_list:
+                result.append(wav_small_path)
+    return result
+
+def get_data(path, partition):
+    if partition == "train":
+        with open(path + "testing_list.txt") as f:
+            testing_list = f.read().splitlines()
+        with open(path + "validation_list.txt") as f:
+            validation_list = f.read().splitlines()
+        wav_list = build_training_list(path, testing_list, validation_list)
+    else:
+        with open(path + "validation_list.txt") as f:
+            wav_list = f.read().splitlines()
+    
+    data = []
+    labels = []
+    for elt in wav_list:
+        (rate, signal) = wav.read(path+elt)
+        mfcc_static = mfcc(signal, rate)
+        mfcc_deltas = delta(mfcc_static, 2)
+        mfcc_delta_deltas = delta(mfcc_deltas, 2)
+        features = np.hstack([mfcc_static, mfcc_deltas, mfcc_delta_deltas])
+
+        features = (features - np.mean(features, axis=0)) / np.std(features, axis=0)
+        data.append(features)
+        labels.append(elt)
+    return labels, data
 
 class Dataset(object):
     """Creat data class."""
@@ -17,8 +59,8 @@ class Dataset(object):
 
         self.feature_dim = config.feature_dim
 
-        data_scp = getattr(config, "%sfile" % partition)
-        labels, data = zip(*read_mat_scp(data_scp))
+        data_path = getattr(config, "data_path")
+        labels, data = get_data(data_path, partition)
 
         words = [re.split("_", x)[0] for x in labels]
         uwords = np.unique(words)
@@ -63,7 +105,7 @@ class Dataset(object):
     def batch(self, batch_size, max_same=1, max_diff=1):
         """Batch data."""
 
-        self.shuffle()
+        # self.shuffle()
 
         same = []
         for index, word_id in enumerate(self.ids):  # collect same samples

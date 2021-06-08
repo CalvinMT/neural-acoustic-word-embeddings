@@ -12,8 +12,7 @@ from average_precision import average_precision
 class Config(object):
     """Set up model for debugging."""
 
-    trainfile = "../kaldi/data/len6-50frames-count2/train/mfcc.scp"
-    devfile = "../kaldi/data/len6-50frames-count2/dev/mfcc.scp"
+    data_path = "../../../Datasets/speech_commands_v0.02/"
     batch_size = 32
     current_epoch = 0
     num_epochs = 100
