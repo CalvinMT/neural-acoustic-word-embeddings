@@ -2,7 +2,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 # --
-from scipy.misc import comb
+try:  # SciPy >= 0.19
+    from scipy.special import comb
+except ImportError:
+    from scipy.misc import comb
 from scipy.spatial.distance import pdist
 import numpy as np
 import tensorflow as tf
