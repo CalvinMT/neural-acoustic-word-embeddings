@@ -62,7 +62,7 @@ class Dataset(object):
         data_path = getattr(config, "data_path")
         labels, data = get_data(data_path, partition)
 
-        words = [re.split("_", x)[0] for x in labels]
+        words = [re.split("/", x)[0] for x in labels]
         uwords = np.unique(words)
 
         word2id = {v: k for k, v in enumerate(uwords)}
