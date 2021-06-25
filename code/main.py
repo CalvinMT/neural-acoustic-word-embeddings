@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import division
 # --
 from os import path, makedirs
+import argparse
 import numpy as np
 import tensorflow as tf
 from model import Model
@@ -37,10 +38,14 @@ class Config(object):
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Neural Acoustic Word Embeddings')
+    parser.add_argument('-t', '--trimdata', type=float, default=1.0, help='Enable trimming of test, validation and training lists to the given percentage')
+    args = parser.parse_args()
+
     config = Config()
 
-    train_data = Dataset(partition="train", config=config)
-    dev_data = Dataset(partition="dev", config=config, feature_mean=train_data.feature_mean)
+    train_data = Dataset(partition="train", config=config, trim_data_percentage=args.trimdata)
+    dev_data = Dataset(partition="dev", config=config, feature_mean=train_data.feature_mean, trim_data_percentage=args.trimdata)
 
     train_model = Model(is_train=True, config=config, reuse=None)
     dev_model = Model(is_train=False, config=config, reuse=True)

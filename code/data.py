@@ -25,7 +25,44 @@ def build_training_list(path, testing_list, validation_list):
                 result.append(wav_small_path)
     return result
 
-def get_data(path, partition):
+def trim_data(data, percentage=0.3):
+    """
+    Based on SpeechCommand_v0.02 directory structure.
+    """
+    length_list = []
+    current_directory_length = 0
+    current_directory = data[0].split("/")[-2]
+    for element in data:
+        element_directory = element.split("/")[-2]
+        if element_directory != current_directory:
+            length_list.append(current_directory_length)
+            current_directory = element_directory
+            current_directory_length = 1
+        else:
+            current_directory_length += 1
+    length_list.append(current_directory_length)
+
+    reduced_length_list = []
+    for length in length_list:
+        reduced_length_list.append(int(length * percentage))
+    
+    result = []
+    current_directory_index = 0
+    current_directory = data[0].split("/")[-2]
+    cpt = 0
+    for i, element in enumerate(data):
+        element_directory = element.split("/")[-2]
+        if element_directory != current_directory:
+            current_directory = element_directory
+            current_directory_index += 1
+            cpt = 1
+        else:
+            if cpt < reduced_length_list[current_directory_index]:
+                result.append(data[i])
+            cpt += 1
+    return result
+
+def get_data(path, partition, trim_data_percentage=1.0):
     if partition == "train":
         with open(path + "testing_list.txt") as f:
             testing_list = f.read().splitlines()
@@ -35,6 +72,9 @@ def get_data(path, partition):
     else:
         with open(path + "validation_list.txt") as f:
             wav_list = f.read().splitlines()
+
+    if trim_data_percentage < 1.0:
+        wav_list = trim_data(wav_list, trim_data_percentage)
     
     data = []
     labels = []
@@ -53,14 +93,14 @@ def get_data(path, partition):
 class Dataset(object):
     """Creat data class."""
 
-    def __init__(self, partition, config, feature_mean=None):
+    def __init__(self, partition, config, feature_mean=None, trim_data_percentage=1.0):
         """Initialize dataset."""
         self.is_train = (partition == "train")
 
         self.feature_dim = config.feature_dim
 
         data_path = getattr(config, "data_path")
-        labels, data = get_data(data_path, partition)
+        labels, data = get_data(data_path, partition, trim_data_percentage)
 
         words = [re.split("/", x)[0] for x in labels]
         uwords = np.unique(words)
