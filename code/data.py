@@ -113,7 +113,7 @@ class Dataset(object):
             same.append(np.random.permutation(indices[indices != index])[:max_same])
         same = np.array(same)
 
-        diff_ids = np.random.randint(0, self.num_classes - 1, (self.num_examples, max_diff))
+        diff_ids = np.random.randint(0, self.num_classes, (self.num_examples, max_diff))
         diff_ids[diff_ids >= np.tile(self.ids.reshape(-1, 1), [1, max_diff])] += 1
 
         diff = np.full_like(diff_ids, 0, dtype=np.int32)
