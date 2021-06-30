@@ -13,36 +13,44 @@ from average_precision import average_precision
 class Config(object):
     """Set up model for debugging."""
 
-    data_path = "../../../Datasets/speech_commands_v0.02/"
-    batch_size = 32
-    current_epoch = 0
-    num_epochs = 100
-    feature_dim = 39
-    num_layers = 3
-    hidden_size = 256
-    bidirectional = True
-    keep_prob = 0.7
-    margin = 0.5
-    max_same = 1
-    max_diff = 5
-    lr = 0.001
-    mom = 0.9
-    logdir = "../logs/test"
-    ckptdir = "../ckpts/test"
-    log_interval = 10
-    ckpt = None
-    debugmode = True
+    def __init__(self, path, logsSubname):
+        self.data_path = path
+        if logsSubname != "":
+            self.logdir = "../logs_" + logsSubname + "/test"
+            self.ckptdir = "../ckpts_" + logsSubname + "/test"
+        else:
+            self.logdir = "../logs/test"
+            self.ckptdir = "../ckpts/test"
 
-    makedirs(logdir, exist_ok=True)
-    makedirs(ckptdir, exist_ok=True)
+        self.batch_size = 32
+        self.current_epoch = 0
+        self.num_epochs = 100
+        self.feature_dim = 39
+        self.num_layers = 3
+        self.hidden_size = 256
+        self.bidirectional = True
+        self.keep_prob = 0.7
+        self.margin = 0.5
+        self.max_same = 1
+        self.max_diff = 5
+        self.lr = 0.001
+        self.mom = 0.9
+        self.log_interval = 10
+        self.ckpt = None
+        self.debugmode = True
+
+        makedirs(self.logdir, exist_ok=True)
+        makedirs(self.ckptdir, exist_ok=True)
 
 
 def main():
     parser = argparse.ArgumentParser(description='Neural Acoustic Word Embeddings')
+    parser.add_argument('-l', '--logssubname', type=str, default="", help='Subname given to logs')
     parser.add_argument('-t', '--trimdata', type=float, default=1.0, help='Enable trimming of test, validation and training lists to the given percentage')
+    parser.add_argument('path')
     args = parser.parse_args()
 
-    config = Config()
+    config = Config(args.path, args.logssubname)
 
     train_data = Dataset(partition="train", config=config, trim_data_percentage=args.trimdata)
     dev_data = Dataset(partition="dev", config=config, feature_mean=train_data.feature_mean, trim_data_percentage=args.trimdata)
