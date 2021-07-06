@@ -16,11 +16,11 @@ class Config(object):
     def __init__(self, path, logsSubname):
         self.data_path = path
         if logsSubname != "":
-            self.logdir = "../logs_" + logsSubname + "/test"
-            self.ckptdir = "../ckpts_" + logsSubname + "/test"
+            self.logdir = "../logs_" + logsSubname + "/train"
+            self.ckptdir = "../ckpts_" + logsSubname + "/train"
         else:
-            self.logdir = "../logs/test"
-            self.ckptdir = "../ckpts/test"
+            self.logdir = "../logs/train"
+            self.ckptdir = "../ckpts/train"
 
         self.batch_size = 32
         self.current_epoch = 0
