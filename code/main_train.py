@@ -13,14 +13,11 @@ from average_precision import average_precision
 class Config(object):
     """Set up model for debugging."""
 
-    def __init__(self, path, logsSubname):
-        self.data_path = path
-        if logsSubname != "":
-            self.logdir = "../logs_" + logsSubname + "/train"
-            self.ckptdir = "../ckpts_" + logsSubname + "/train"
-        else:
-            self.logdir = "../logs/train"
-            self.ckptdir = "../ckpts/train"
+    def __init__(self, data_path, model_name):
+        self.data_path = data_path
+
+        self.logdir = "../models/" + model_name + "/logs"
+        self.ckptdir = "../models/" + model_name + "/ckpts"
 
         self.batch_size = 32
         self.current_epoch = 0
@@ -45,12 +42,12 @@ class Config(object):
 
 def main():
     parser = argparse.ArgumentParser(description='Neural Acoustic Word Embeddings')
-    parser.add_argument('-l', '--logssubname', type=str, default="", help='Subname given to logs')
     parser.add_argument('-t', '--trimdata', type=float, default=1.0, help='Enable trimming of test, validation and training lists to the given percentage')
-    parser.add_argument('path')
+    parser.add_argument('modelname')
+    parser.add_argument('datapath')
     args = parser.parse_args()
 
-    config = Config(args.path, args.logssubname)
+    config = Config(args.datapath, args.modelname)
 
     train_data = Dataset(partition="train", config=config, trim_data_percentage=args.trimdata)
     dev_data = Dataset(partition="dev", config=config, feature_mean=train_data.feature_mean, trim_data_percentage=args.trimdata)
