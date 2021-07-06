@@ -69,8 +69,11 @@ def get_data(path, partition, trim_data_percentage=1.0):
         with open(path + "validation_list.txt") as f:
             validation_list = f.read().splitlines()
         wav_list = build_training_list(path, testing_list, validation_list)
-    else:
+    elif partition == "dev":
         with open(path + "validation_list.txt") as f:
+            wav_list = f.read().splitlines()
+    elif partition == "test":
+        with open(path + "testing_list.txt") as f:
             wav_list = f.read().splitlines()
 
     if trim_data_percentage < 1.0:
