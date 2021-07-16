@@ -4,11 +4,13 @@ from __future__ import division
 
 import re, os
 import numpy as np
+import scipy.io.wavfile as wav
 from collections import Counter
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
 from python_speech_features import fbank, lifter
 from python_speech_features import delta
 from scipy.fftpack import dct
-import scipy.io.wavfile as wav
 
 def calculate_nfft(samplerate, winlen):
     """
@@ -113,20 +115,7 @@ def trim_data(data, percentage=0.3):
             cpt += 1
     return result
 
-def get_data(path, partition, trim_data_percentage=1.0):
-    if partition == "train":
-        with open(path + "testing_list.txt") as f:
-            testing_list = f.read().splitlines()
-        with open(path + "validation_list.txt") as f:
-            validation_list = f.read().splitlines()
-        wav_list = build_training_list(path, testing_list, validation_list)
-    elif partition == "dev":
-        with open(path + "validation_list.txt") as f:
-            wav_list = f.read().splitlines()
-    elif partition == "test":
-        with open(path + "testing_list.txt") as f:
-            wav_list = f.read().splitlines()
-
+def get_mfcc_from_list(wav_list, path, trim_data_percentage=1.0):
     if trim_data_percentage < 1.0:
         wav_list = trim_data(wav_list, trim_data_percentage)
     
@@ -142,6 +131,48 @@ def get_data(path, partition, trim_data_percentage=1.0):
         features = (features - np.mean(features, axis=0)) / np.std(features, axis=0)
         data.append(features)
         labels.append(elt)
+    return labels, data
+
+def get_mfcc_from_file(path):
+    data = []
+    labels = []
+    audio = AudioSegment.from_wav(path)
+    block_list = split_on_silence(audio, min_silence_len=1, silence_thresh=-96, keep_silence=0, seek_step=1)
+    for i, block in enumerate(block_list):
+        label = path.split('/')[-1].rstrip(".wav") + "-" + str(i)
+        rate = block.frame_rate
+        """ source: https://stackoverflow.com/a/66922265 """
+        signal = np.array(block.get_array_of_samples(), dtype=np.float32).reshape((-1, block.channels)).T / (1 << (8 * block.sample_width))
+        mfcc_static = mfcc(signal, rate)
+        mfcc_deltas = delta(mfcc_static, 2)
+        mfcc_delta_deltas = delta(mfcc_deltas, 2)
+        features = np.hstack([mfcc_static, mfcc_deltas, mfcc_delta_deltas])
+
+        features = (features - np.mean(features, axis=0)) / np.std(features, axis=0)
+        data.append(features)
+        labels.append(label)
+    return labels, data
+
+
+def get_data(path, partition, trim_data_percentage=1.0):
+    if partition == "train":
+        with open(path + "testing_list.txt") as f:
+            testing_list = f.read().splitlines()
+        with open(path + "validation_list.txt") as f:
+            validation_list = f.read().splitlines()
+        wav_list = build_training_list(path, testing_list, validation_list)
+        labels, data = get_mfcc_from_list(wav_list, path, trim_data_percentage)
+    elif partition == "dev":
+        with open(path + "validation_list.txt") as f:
+            wav_list = f.read().splitlines()
+        labels, data = get_mfcc_from_list(wav_list, path, trim_data_percentage)
+    elif partition == "test":
+        with open(path + "testing_list.txt") as f:
+            wav_list = f.read().splitlines()
+        labels, data = get_mfcc_from_list(wav_list, path, trim_data_percentage)
+    else:
+        labels, data = get_mfcc_from_file(path)
+
     return labels, data
 
 class Dataset(object):
