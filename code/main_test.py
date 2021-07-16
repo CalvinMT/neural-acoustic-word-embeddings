@@ -11,6 +11,9 @@ from model import Model
 from data import Dataset
 
 
+RESULTS_DIRECTORY = "results"
+
+
 class Config(object):
     """Set up model for debugging."""
 
@@ -39,6 +42,24 @@ class Config(object):
 
         os.makedirs(self.logdir, exist_ok=True)
         os.makedirs(self.ckptdir, exist_ok=True)
+
+
+def save(AUC, pivot, path, name):
+    """
+    Save AUC and ROC pivot points to the results directory. AUC is stored in a txt 
+    file and ROC pivot points are saved in a csv file.
+
+    :param AUC: float (Area Under the Curve)
+    :param pivot: pandas data frame pivot representation
+    :param path: results path
+    :param name: filename prefix
+    :return: None
+    """
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    with open(os.path.join(path, name + "_auc.txt"), 'w+') as f:
+        f.write("%s\n" % AUC)
+    pivot.to_csv(os.path.join(path, name + "_pivots.csv"), index=False)
 
 
 def main():
@@ -82,7 +103,10 @@ def main():
             train_labels.append(ids)
         train_embeddings, train_labels = np.concatenate(train_embeddings), np.concatenate(train_labels)
 
-        stats.compute_ROC_curve(test_embeddings, train_embeddings)
+        resultsPath = os.path.join(RESULTS_DIRECTORY, "nawe_" + args.modelname)
+
+        AUC, pivot = stats.compute_ROC_curve(test_embeddings, train_embeddings)
+        save(AUC, pivot, resultsPath, "test")
 
 if __name__ == "__main__":
     main()
