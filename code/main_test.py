@@ -2,13 +2,14 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
 # --
-from os import path, makedirs
 import argparse
 import numpy as np
+import os
+import stats
 import tensorflow as tf
 from model import Model
 from data import Dataset
-from average_precision import average_precision
+
 
 class Config(object):
     """Set up model for debugging."""
@@ -36,8 +37,8 @@ class Config(object):
         self.ckpt = None
         self.debugmode = True
 
-        makedirs(self.logdir, exist_ok=True)
-        makedirs(self.ckptdir, exist_ok=True)
+        os.makedirs(self.logdir, exist_ok=True)
+        os.makedirs(self.ckptdir, exist_ok=True)
 
 
 def main():
@@ -49,9 +50,11 @@ def main():
 
     config = Config(args.datapath, args.modelname)
 
+    train_data = Dataset(partition="train", config=config, trim_data_percentage=args.trimdata)
     test_data = Dataset(partition="test", config=config, trim_data_percentage=args.trimdata)
 
-    test_model = Model(is_train=False, config=config, reuse=False)
+    train_model = Model(is_train=True, config=config, reuse=None)
+    test_model = Model(is_train=False, config=config, reuse=True)
 
     batch_size = config.batch_size
 
@@ -67,12 +70,19 @@ def main():
             saver.restore(sess, ckpt.model_checkpoint_path)
             print("restored from %s" % ckpt.model_checkpoint_path)
 
-        embeddings, labels = [], []
+        test_embeddings, test_labels = [], []
         for x, ts, ids in test_data.batch(batch_size):
-            embeddings.append(test_model.get_embeddings(sess, x, ts))
-            labels.append(ids)
-        embeddings, labels = np.concatenate(embeddings), np.concatenate(labels)
-        print("ap: %.4f" % average_precision(embeddings, labels))
+            test_embeddings.append(test_model.get_embeddings(sess, x, ts))
+            test_labels.append(ids)
+        test_embeddings, test_labels = np.concatenate(test_embeddings), np.concatenate(test_labels)
+
+        train_embeddings, train_labels = [], []
+        for x, ts, ids in train_data.batch(batch_size):
+            train_embeddings.append(train_model.get_embeddings(sess, x, ts))
+            train_labels.append(ids)
+        train_embeddings, train_labels = np.concatenate(train_embeddings), np.concatenate(train_labels)
+
+        stats.compute_ROC_curve(test_embeddings, train_embeddings)
 
 if __name__ == "__main__":
     main()
